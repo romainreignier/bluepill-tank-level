@@ -8,8 +8,11 @@ use embassy_stm32::time::hz;
 use embassy_stm32::timer::input_capture::{CapturePin, InputCapture};
 use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
 use embassy_stm32::timer::{self, Channel};
-use embassy_stm32::{bind_interrupts, peripherals, Config};
+use embassy_stm32::usart::{self, Uart};
+use embassy_stm32::{bind_interrupts, peripherals};
 use embassy_time::Timer;
+use heapless::String;
+use ufmt::uwrite;
 use {defmt_rtt as _, panic_probe as _};
 
 #[embassy_executor::task]
@@ -38,7 +41,7 @@ bind_interrupts!(struct Irqs {
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
-    let mut config = Config::default();
+    let mut config = embassy_stm32::Config::default();
     {
         use embassy_stm32::rcc::*;
         config.rcc.hse = Some(Hse {
@@ -56,6 +59,9 @@ async fn main(spawner: Spawner) {
         config.rcc.apb2_pre = APBPrescaler::DIV1;
     }
     let p = embassy_stm32::init(config);
+
+    let config = usart::Config::default();
+    let mut usart = Uart::new_blocking(p.USART2, p.PA3, p.PA2, config).unwrap();
 
     info!("Hello World!");
 
@@ -101,6 +107,11 @@ async fn main(spawner: Spawner) {
         let pulse_width = end_pulse_value - start_pulse_value;
         let pulse_width_us = pulse_width as u32 * 1_000_000 / capture_freq;
         info!("new width = {} ticks -> {} us", pulse_width, pulse_width_us);
-        info!("Distance = {} mm", pulse_width_us as f32 * 0.171);
+        let distance_mm = pulse_width_us as f32 * 0.171;
+        info!("Distance = {} mm", distance_mm);
+
+        let mut s: String<16> = String::new();
+        uwrite!(s, "{}\r\n", distance_mm as u32).unwrap();
+        unwrap!(usart.blocking_write(s.as_bytes()));
     }
 }
