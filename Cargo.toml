@@ -26,6 +26,8 @@ embassy-time = { git = "https://github.com/brunob45/embassy", rev = "a87b3330340
     "defmt-timestamp-uptime",
     "tick-hz-32_768",
 ] }
+embassy-embedded-hal = { git = "https://github.com/brunob45/embassy", rev = "a87b33303403ba3601d0c631b9efe1cb3853c73b" }
+embassy-sync = { git = "https://github.com/brunob45/embassy", rev = "a87b33303403ba3601d0c631b9efe1cb3853c73b" }
 
 defmt = "0.3"
 defmt-rtt = "0.4"
@@ -39,9 +41,14 @@ panic-probe = { version = "0.3", features = ["print-defmt"] }
 
 embedded-hal = "1"
 
-ufmt = "0.2.0"
-ufmt-macros = "0.3.0"
-heapless = { version = "0.8.0", features = ["ufmt"] }
+ufmt = "0.2"
+ufmt-macros = "0.3"
+heapless = { version = "0.8", features = ["ufmt"] }
+
+display-interface-spi = "0.5"
+display-interface = { version = "0.5", features = ["defmt-03"] }
+ili9341 = "0.6"
+embedded-graphics = { version = "0.8", features = ["defmt"] }
 
 [profile.dev]
 opt-level = "s"
