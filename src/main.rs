@@ -68,7 +68,7 @@ async fn main(spawner: Spawner) {
     unwrap!(spawner.spawn(blinky(p.PC13.degrade())));
 
     // Input Capture PB6 T4C1
-    let capture_freq = 10_000;
+    let capture_freq = 1_000_000;
     let echo = CapturePin::new_ch1(p.PB6, Pull::Down);
     let mut ic = InputCapture::new(
         p.TIM4,
@@ -82,7 +82,6 @@ async fn main(spawner: Spawner) {
     );
 
     // PWM T1C1
-    // Period of 1 Hz for a pulse per second
     let trig = PwmPin::new_ch1(p.PA8, OutputType::PushPull);
     let mut pwm = SimplePwm::new(
         p.TIM1,
@@ -90,28 +89,36 @@ async fn main(spawner: Spawner) {
         None,
         None,
         None,
-        hz(1),
+        hz(10),
         Default::default(),
     );
     let max_duty = pwm.get_max_duty();
     info!("max duty cycle: {}", max_duty);
-    pwm.set_duty(Channel::Ch1, max_duty / 50); // 20 ms pulse every second
+    pwm.set_duty(Channel::Ch1, max_duty / 10);
     pwm.enable(Channel::Ch1);
 
-    loop {
-        info!("wait for pulse...");
-        ic.wait_for_rising_edge(Channel::Ch1).await;
-        let start_pulse_value = ic.get_capture_value(Channel::Ch1) as u16;
-        ic.wait_for_falling_edge(Channel::Ch1).await;
-        let end_pulse_value = ic.get_capture_value(Channel::Ch1) as u16;
-        let pulse_width = end_pulse_value - start_pulse_value;
-        let pulse_width_us = pulse_width as u32 * 1_000_000 / capture_freq;
-        info!("new width = {} ticks -> {} us", pulse_width, pulse_width_us);
-        let distance_mm = pulse_width_us as f32 * 0.171;
-        info!("Distance = {} mm", distance_mm);
+    let samples = 10;
 
+    loop {
+        let mut sum = 0;
+        for _ in 0..samples {
+            info!("wait for pulse...");
+            ic.wait_for_rising_edge(Channel::Ch1).await;
+            let start_pulse_value = ic.get_capture_value(Channel::Ch1) as u16;
+            ic.wait_for_falling_edge(Channel::Ch1).await;
+            let end_pulse_value = ic.get_capture_value(Channel::Ch1) as u16;
+            let pulse_width = end_pulse_value - start_pulse_value;
+            let pulse_width_us = pulse_width as u32 * (1_000_000 / capture_freq);
+            info!("new width = {} ticks -> {} us", pulse_width, pulse_width_us);
+            let distance_mm = pulse_width_us as f32 * 0.171;
+            info!("Distance = {} mm", distance_mm);
+
+            sum += distance_mm as u32;
+        }
+
+        let average_distance_mm = sum / samples;
         let mut s: String<16> = String::new();
-        uwrite!(s, "{}\r\n", distance_mm as u32).unwrap();
+        uwrite!(s, "{}\r\n", average_distance_mm as u32).unwrap();
         unwrap!(usart.blocking_write(s.as_bytes()));
     }
 }
