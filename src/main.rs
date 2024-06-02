@@ -9,7 +9,7 @@ use embassy_executor::Spawner;
 use embassy_stm32::gpio::{AnyPin, Level, Output, OutputType, Pin, Pull, Speed};
 use embassy_stm32::spi::{self, Spi};
 use embassy_stm32::time::hz;
-use embassy_stm32::timer::input_capture::{CapturePin, InputCapture};
+use embassy_stm32::timer::pwm_input::PwmInput;
 use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
 use embassy_stm32::timer::{self, Channel};
 use embassy_stm32::usart::{self, Uart};
@@ -49,7 +49,7 @@ async fn blinky(led: AnyPin) {
 }
 
 bind_interrupts!(struct Irqs {
-    TIM4 => timer::CaptureCompareInterruptHandler<peripherals::TIM4>;
+    TIM4 => timer::InterruptHandler<peripherals::TIM4>;
 });
 
 #[embassy_executor::main]
@@ -150,19 +150,9 @@ async fn main(spawner: Spawner) {
             .draw(&mut lcd)
     );
 
-    // Input Capture PB6 T4C1
     let capture_freq = 1_000_000;
-    let echo = CapturePin::new_ch1(p.PB6, Pull::Down);
-    let mut ic = InputCapture::new(
-        p.TIM4,
-        Some(echo),
-        None,
-        None,
-        None,
-        Irqs,
-        hz(capture_freq),
-        Default::default(),
-    );
+    let mut pwm_input = PwmInput::new(p.TIM4, p.PB6, Pull::None, Irqs, hz(capture_freq));
+    pwm_input.enable();
 
     // PWM T1C1
     let trig = PwmPin::new_ch1(p.PA8, OutputType::PushPull);
@@ -186,11 +176,7 @@ async fn main(spawner: Spawner) {
         let mut sum = 0;
         for _ in 0..samples {
             info!("wait for pulse...");
-            ic.wait_for_rising_edge(Channel::Ch1).await;
-            let start_pulse_value = ic.get_capture_value(Channel::Ch1) as u16;
-            ic.wait_for_falling_edge(Channel::Ch1).await;
-            let end_pulse_value = ic.get_capture_value(Channel::Ch1) as u16;
-            let pulse_width = end_pulse_value - start_pulse_value;
+            let pulse_width = pwm_input.wait_for_falling_edge().await as u16;
             let pulse_width_us = pulse_width as u32 * (1_000_000 / capture_freq);
             info!("new width = {} ticks -> {} us", pulse_width, pulse_width_us);
             let distance_mm = pulse_width_us as f32 * 0.171;
