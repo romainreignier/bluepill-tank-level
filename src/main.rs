@@ -3,8 +3,8 @@
 
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_stm32::gpio::{AnyPin, Level, Output, Pull, Pin, Speed, OutputType};
-use embassy_stm32::time::{Hertz, hz, mhz};
+use embassy_stm32::gpio::{AnyPin, Level, Output, OutputType, Pin, Pull, Speed};
+use embassy_stm32::time::hz;
 use embassy_stm32::timer::input_capture::{CapturePin, InputCapture};
 use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
 use embassy_stm32::timer::{self, Channel};
@@ -42,7 +42,7 @@ async fn main(spawner: Spawner) {
     {
         use embassy_stm32::rcc::*;
         config.rcc.hse = Some(Hse {
-            freq: Hertz(8_000_000),
+            freq: hz(8_000_000),
             mode: HseMode::Oscillator,
         });
         config.rcc.pll = Some(Pll {
@@ -62,15 +62,31 @@ async fn main(spawner: Spawner) {
     unwrap!(spawner.spawn(blinky(p.PC13.degrade())));
 
     // Input Capture PB6 T4C1
-    // 1 MHz to get capture value in microseconds
-    // TIM4 is a 16-bit timer so max value = 65535 -> 65536 * 0.171 = 11115 mm (11.1 m)
+    let capture_freq = 10_000;
     let echo = CapturePin::new_ch1(p.PB6, Pull::Down);
-    let mut ic = InputCapture::new(p.TIM4, Some(echo), None, None, None, Irqs, mhz(1), Default::default());
+    let mut ic = InputCapture::new(
+        p.TIM4,
+        Some(echo),
+        None,
+        None,
+        None,
+        Irqs,
+        hz(capture_freq),
+        Default::default(),
+    );
 
     // PWM T1C1
     // Period of 1 Hz for a pulse per second
     let trig = PwmPin::new_ch1(p.PA8, OutputType::PushPull);
-    let mut pwm = SimplePwm::new(p.TIM1, Some(trig), None, None, None, hz(1), Default::default());
+    let mut pwm = SimplePwm::new(
+        p.TIM1,
+        Some(trig),
+        None,
+        None,
+        None,
+        hz(1),
+        Default::default(),
+    );
     let max_duty = pwm.get_max_duty();
     info!("max duty cycle: {}", max_duty);
     pwm.set_duty(Channel::Ch1, max_duty / 50); // 20 ms pulse every second
@@ -79,11 +95,12 @@ async fn main(spawner: Spawner) {
     loop {
         info!("wait for pulse...");
         ic.wait_for_rising_edge(Channel::Ch1).await;
-        let start_pulse_value = ic.get_capture_value(Channel::Ch1);
+        let start_pulse_value = ic.get_capture_value(Channel::Ch1) as u16;
         ic.wait_for_falling_edge(Channel::Ch1).await;
-        let end_pulse_value = ic.get_capture_value(Channel::Ch1);
+        let end_pulse_value = ic.get_capture_value(Channel::Ch1) as u16;
         let pulse_width = end_pulse_value - start_pulse_value;
-        info!("new width = {} ticks", pulse_width);
-        info!("Distance = {} mm", pulse_width as f32 * 0.171);
+        let pulse_width_us = pulse_width as u32 * 1_000_000 / capture_freq;
+        info!("new width = {} ticks -> {} us", pulse_width, pulse_width_us);
+        info!("Distance = {} mm", pulse_width_us as f32 * 0.171);
     }
 }
