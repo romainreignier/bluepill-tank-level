@@ -7,7 +7,7 @@ edition = "2021"
 # Use brunob45 fork to get interrupts in pwm_input while PR3029 is not yet merged
 # force timer 3 as a time-driver because TIM1 and TIM4 are used for the ultrasonic sensor and TIM4 is picked
 # by default with the feature time-driver-any
-embassy-stm32 = { git = "https://github.com/brunob45/embassy", rev = "254ea3a2a944d29cd21c4c69af3b024ef13176d2", features = [
+embassy-stm32 = { git = "https://github.com/brunob45/embassy", rev = "0a4db6ffe2b45e3e72c64307562be78e2813b692", features = [
     "defmt",
     "stm32f103c8",
     "memory-x",
@@ -15,19 +15,19 @@ embassy-stm32 = { git = "https://github.com/brunob45/embassy", rev = "254ea3a2a9
     "time-driver-tim3",
     "exti",
 ] }
-embassy-executor = { git = "https://github.com/brunob45/embassy", rev = "254ea3a2a944d29cd21c4c69af3b024ef13176d2", features = [
+embassy-executor = { git = "https://github.com/brunob45/embassy", rev = "0a4db6ffe2b45e3e72c64307562be78e2813b692", features = [
     "arch-cortex-m",
     "executor-thread",
     "defmt",
     "integrated-timers",
 ] }
-embassy-time = { git = "https://github.com/brunob45/embassy", rev = "254ea3a2a944d29cd21c4c69af3b024ef13176d2", features = [
+embassy-time = { git = "https://github.com/brunob45/embassy", rev = "0a4db6ffe2b45e3e72c64307562be78e2813b692", features = [
     "defmt",
     "defmt-timestamp-uptime",
     "tick-hz-32_768",
 ] }
-embassy-embedded-hal = { git = "https://github.com/brunob45/embassy", rev = "254ea3a2a944d29cd21c4c69af3b024ef13176d2" }
-embassy-sync = { git = "https://github.com/brunob45/embassy", rev = "254ea3a2a944d29cd21c4c69af3b024ef13176d2" }
+embassy-embedded-hal = { git = "https://github.com/brunob45/embassy", rev = "0a4db6ffe2b45e3e72c64307562be78e2813b692" }
+embassy-sync = { git = "https://github.com/brunob45/embassy", rev = "0a4db6ffe2b45e3e72c64307562be78e2813b692" }
 
 defmt = "0.3"
 defmt-rtt = "0.4"
